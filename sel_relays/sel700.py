@@ -4,7 +4,7 @@ from time import sleep
 
 class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
-    def __init__(self, ip, password1='OTTER', password2='TAIL', porta=23, level2=False):
+    def __init__(self, ip: str, password1='OTTER', password2='TAIL', porta=23, level2=False):
         self.tn = Telnet(ip, porta, timeout=10)
         self.tn.write(b'ACC\r\n')
         self.tn.read_until(b'Password: ?')
@@ -18,9 +18,9 @@ class SEL700:
 
     """ Level 1 Methods"""
 
-    def read_wordbit(self, command):
-        """Read any configurable wordbit from the IED"""
-        self.tn.write((command + '\r\n').encode('utf-8'))  # Write the command name as a telnet terminal
+    def read_wordbit(self, command: str):
+        """Read any configurable wordbit from the IED. Write the command name as a telnet terminal"""
+        self.tn.write((command + '\r\n').encode('utf-8'))
         reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
         reading2 = reading.split(':= ')
         reading3 = reading2[1].split('\r')
@@ -61,7 +61,7 @@ class SEL700:
         final_reading = reading5.replace(" ", "")
         return final_reading
 
-    def read_dnppoint(self, data_type, position):
+    def read_dnppoint(self, data_type: str, position: int):
         """
         Read an specific point from DNP Map
         Specify the data type of the point:
@@ -101,7 +101,7 @@ class SEL700:
                 pass
         return final_reading
 
-    def read_target_value(self, wordbit):
+    def read_target_value(self, wordbit: str):
         """Read the current value of a binary wordbit"""
         command = f'TAR {wordbit}'
         self.tn.write((command + '\r\n').encode('utf-8'))
@@ -135,7 +135,7 @@ class SEL700:
 
     """ Level 2 Methods"""
 
-    def edit_wordbit(self, command, parameter):
+    def edit_wordbit(self, command: str, parameter: str):
         """Edit a specific parameter of the relay"""
         command_in_bytes = (f'{command}' + '\r\n').encode('utf-8')
         self.tn.write(command_in_bytes)

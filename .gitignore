@@ -1,6 +1,6 @@
-venv
-test_file.py
+venv/
 sel_relays.egg-info/
 dist/
 setup.py
 sel_relays/__pycache__
+tests.py

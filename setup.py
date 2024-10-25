@@ -5,7 +5,7 @@ with open('README.md', 'r') as arq:
 
 setup(
     name='sel_relays',
-    version='0.1',
+    version='0.1.1',
     author='Elisandro Peixoto',
     long_description=readme,
     long_description_content_type='text/markdown',
