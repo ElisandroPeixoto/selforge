@@ -1,5 +1,6 @@
 from telnetlib import Telnet
 from time import sleep
+import re
 
 
 class SEL700:
@@ -74,7 +75,7 @@ class SEL700:
         else:
             point_position2string = str(position)
 
-        # Executa o comando
+        # Executa o command
         command = f'SHO D 1 {data_type}_{point_position2string}'
         self.tn.write((command + '\r\n').encode('utf-8'))
         reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
@@ -120,23 +121,33 @@ class SEL700:
         return final_reading
 
     def read_ser(self, lines=0):
-        """Read the relay's SER. Enter the number of lines if you wish to view a limited quantity of records"""
+        """Read the IEDs SER. Enter the number of lines if you wish to view a limited quantity of records"""
         command = f'SER {lines}\r\n'
         self.tn.write(command.encode('utf-8'))
         leitura = self.tn.read_until(b'=>>')
         return leitura.decode('utf-8')
 
     def clear_ser(self):
-        """Clear the relay's SER"""
+        """Clear the IEDs SER"""
         self.tn.write(b'SER C\r\n')
         self.tn.read_until(b'Are you sure (Y,N)?')
         self.tn.write(b'Y\r\n')
         sleep(1)
 
+    def read_time(self):
+        """Read the time of the IED"""
+        self.tn.write(b'TIME\r\n')
+        reading = self.tn.read_until(b'=>').decode('utf-8')
+        reading2 = reading.split(':= ')
+        reading3 = reading2[1]
+        reading4 = reading3.split('\r')
+        final_reading = reading4[0]
+        return(final_reading)
+
     """ Level 2 Methods"""
 
     def edit_wordbit(self, command: str, parameter: str):
-        """Edit a specific parameter of the relay"""
+        """Edit a specific parameter of the IED"""
         command_in_bytes = (f'{command}' + '\r\n').encode('utf-8')
         self.tn.write(command_in_bytes)
         self.tn.read_until(b'? ').decode('utf-8')
@@ -158,8 +169,8 @@ class SEL700:
         else:
             point_position_string = str(point_position)
 
-        comando = f'SET D 1 {point_type}_{point_position_string} {new_value}'
-        self.tn.write((comando + '\r\n').encode('utf-8'))
+        command = f'SET D 1 {point_type}_{point_position_string} {new_value}'
+        self.tn.write((command + '\r\n').encode('utf-8'))
 
         self.tn.read_until(b'Save changes (Y,N)? ')
         self.tn.write(b'Y\r\n')
@@ -185,3 +196,21 @@ class SEL700:
         command = f'CON {remotebit} P'
         self.tn.write((command + '\r\n').encode('utf-8'))
         sleep(1)
+
+    def test_db(self, datatype, wordbit, value):
+        """Enable and execute the Test Database Function in the IED"""
+        command = f'TEST DB {datatype} {wordbit} {value}'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+        response = self.tn.expect([b'=>>', rb"\?"])
+        if response[0] == 0:
+            self.tn.write(b'Y\r\n')
+
+    def test_db_overview(self):
+        self.tn.write(b'TEST DB\r\n')
+        response = self.tn.read_until(b'=>>').decode('utf-8')
+        print(response)
+
+    def test_db_off(self):
+        """Disable the Test DB previously activated"""
+        self.tn.write(b'TEST DB OFF\r\n')
+        self.tn.read_until(b'=>>')
