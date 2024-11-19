@@ -4,3 +4,5 @@ dist/
 setup.py
 sel_relays/__pycache__
 tests.py
+draft.py
+draf2.ipynb

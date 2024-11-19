@@ -17,7 +17,7 @@ class SEL700:
             self.tn.write((password2 + '\r\n').encode('utf-8'))
             self.tn.read_until(b'=>>')
 
-    """ Level 1 Methods"""
+    """ ######## METHODS LEVEL 1 ######## """
 
     def read_wordbit(self, command: str):
         """Read any configurable wordbit from the IED. Write the command name as a telnet terminal"""
@@ -144,7 +144,7 @@ class SEL700:
         final_reading = reading4[0]
         return(final_reading)
 
-    """ Level 2 Methods"""
+    """ ######## METHODS LEVEL 2 ######## """
 
     def edit_wordbit(self, command: str, parameter: str):
         """Edit a specific parameter of the IED"""
@@ -159,9 +159,10 @@ class SEL700:
         self.tn.write(b'END\r\n')
         self.tn.read_until(b'Save changes (Y,N)? ')
         self.tn.write(b'Y\r\n')
+        print("Writting changes...")
         sleep(5)
 
-    def edit_dnpmap(self, point_type, point_position, new_value):
+    def edit_dnpmap(self, point_type: str, point_position: int, new_value: str):
         """Edit an specific point of the DNP Map"""
         # Add a zero on the left if the point position is below 10
         if point_position < 10:
@@ -191,21 +192,23 @@ class SEL700:
         self.tn.write(b'Y\r\n')
         sleep(1)
 
-    def pulse_rb(self, remotebit):
+    def pulse_rb(self, remotebit: str):
         """Pulses an specific Remote Bit"""
         command = f'CON {remotebit} P'
         self.tn.write((command + '\r\n').encode('utf-8'))
         sleep(1)
 
-    def test_db(self, datatype, wordbit, value):
+    def test_db(self, datatype: str, wordbit: str, value: str):
         """Enable and execute the Test Database Function in the IED"""
         command = f'TEST DB {datatype} {wordbit} {value}'
         self.tn.write((command + '\r\n').encode('utf-8'))
         response = self.tn.expect([b'=>>', rb"\?"])
-        if response[0] == 0:
+        if response[0] == 1:
             self.tn.write(b'Y\r\n')
+        print('Value Overrided')
 
     def test_db_overview(self):
+        """View the Test DB values overwritten"""
         self.tn.write(b'TEST DB\r\n')
         response = self.tn.read_until(b'=>>').decode('utf-8')
         print(response)
@@ -214,3 +217,13 @@ class SEL700:
         """Disable the Test DB previously activated"""
         self.tn.write(b'TEST DB OFF\r\n')
         self.tn.read_until(b'=>>')
+        print('Test DB Disabled')
+
+    def test_db_check(self):
+        """Check if there is test db in the IED"""
+        self.tn.write(b'TEST DB\r\n')
+        response = self.tn.read_until(B'=>>').decode('utf-8')
+        if 'Invalid' in response:
+            return(False)
+        else:
+            return(True)
