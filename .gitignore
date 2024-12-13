@@ -1,8 +1,7 @@
 venv/
-sel_relays.egg-info/
 dist/
 setup.py
-sel_relays/__pycache__
+selforge/__pycache__
 tests.py
 draft.py
 draft2.ipynb
