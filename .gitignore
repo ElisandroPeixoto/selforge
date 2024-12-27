@@ -2,7 +2,7 @@ venv/
 dist/
 setup.py
 selforge/__pycache__
-selforge/__init__
+selforge/__init__.py
 tests.py
 draft.py
 draft2.ipynb
