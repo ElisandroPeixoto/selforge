@@ -33,7 +33,9 @@ class SEL700:
     def read_firmware(self):
         """Read the IED Firmware"""
         self.tn.write(b'ID\r\n')
-        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        # reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        reading_expect = self.tn.expect([b'=>>', b'=>'])
+        reading = reading_expect[2].decode('utf-8')
         reading2 = reading.split('=')
         reading3 = reading2[1].split('","')
         final_reading = reading3[0]
@@ -150,6 +152,9 @@ class SEL700:
         reading4 = reading3.split('\r')
         final_reading = reading4[0]
         return(final_reading)
+    
+    def telnet_close(self):
+        self.tn.close()
 
     """ ######## METHODS LEVEL 2 ######## """
 
