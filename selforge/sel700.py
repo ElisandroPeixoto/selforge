@@ -29,7 +29,7 @@ class SEL700:
         reading5 = reading3[1].replace('            ', '')
         final_reading = (reading4 + reading5).split('\n\x03\x02')
         return final_reading[0]
-
+     
     def read_firmware(self):
         """Read the IED Firmware"""
         self.tn.write(b'ID\r\n')
@@ -124,8 +124,14 @@ class SEL700:
         """Read the IEDs SER. Enter the number of lines if you wish to view a limited quantity of records"""
         command = f'SER {lines}\r\n'
         self.tn.write(command.encode('utf-8'))
-        leitura = self.tn.read_until(b'=>>')
-        return leitura.decode('utf-8')
+        reading = (self.tn.read_until(b'=>')).decode('utf-8')
+        reading2 = reading.strip().split('\n')
+        list_lines = []
+        for ser_lines in reading2[8:-2]:
+            list_lines.append(ser_lines)
+        
+        final_ser = "\n".join(list_lines)
+        return final_ser
 
     def clear_ser(self):
         """Clear the IEDs SER"""
@@ -133,6 +139,7 @@ class SEL700:
         self.tn.read_until(b'Are you sure (Y,N)?')
         self.tn.write(b'Y\r\n')
         sleep(1)
+        print('SER Clearing Complete')
 
     def read_time(self):
         """Read the time of the IED"""
