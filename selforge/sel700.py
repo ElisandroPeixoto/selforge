@@ -22,7 +22,8 @@ class SEL700:
     def read_wordbit(self, command: str):
         """Read any configurable wordbit from the IED. Write the command name as a telnet terminal"""
         self.tn.write((command + '\r\n').encode('utf-8'))
-        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        reading_expect = self.tn.expect([b'=>>', b'=>'])
+        reading = reading_expect[2].decode('utf-8')
         reading2 = reading.split(':= ')
         reading3 = reading2[1].split('\r')
         reading4 = reading3[0].replace('\r', '')
@@ -187,6 +188,7 @@ class SEL700:
 
         self.tn.read_until(b'Save changes (Y,N)? ')
         self.tn.write(b'Y\r\n')
+        print("Writting changes...")
         sleep(5)
         self.tn.read_until(b'=>>')
 
