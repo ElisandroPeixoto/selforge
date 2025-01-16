@@ -225,7 +225,7 @@ class SEL700:
         """View the Test DB values overwritten"""
         self.tn.write(b'TEST DB\r\n')
         response = self.tn.read_until(b'=>>').decode('utf-8')
-        print(response)
+        return response
 
     def test_db_off(self):
         """Disable the Test DB previously activated"""
@@ -237,7 +237,7 @@ class SEL700:
         """Check if there is test db in the IED"""
         self.tn.write(b'TEST DB\r\n')
         response = self.tn.read_until(B'=>>').decode('utf-8')
-        if 'Invalid' in response:
+        if 'No Values' in response:
             return(False)
         else:
             return(True)
