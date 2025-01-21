@@ -174,6 +174,7 @@ class SEL700:
         self.tn.write(b'Y\r\n')
         print("Writting changes...")
         sleep(5)
+        self.tn.read_until(b'=>>')
 
     def edit_dnpmap(self, point_type: str, point_position: int, new_value: str):
         """Edit an specific point of the DNP Map"""
