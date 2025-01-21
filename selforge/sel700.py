@@ -199,6 +199,7 @@ class SEL700:
         self.tn.read_until(b'Open Breaker (Y,N)?')
         self.tn.write(b'Y\r\n')
         sleep(1)
+        self.tn.read_until(b'=>>')
 
     def close_breaker(self):
         """Run the CLOSE Command"""
@@ -206,6 +207,7 @@ class SEL700:
         self.tn.read_until(b'Close Breaker (Y,N)?')
         self.tn.write(b'Y\r\n')
         sleep(1)
+        self.tn.read_until(b'=>>')
 
     def pulse_rb(self, remotebit: str):
         """Pulses an specific Remote Bit"""
