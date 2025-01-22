@@ -6,6 +6,7 @@ import re
 class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
     def __init__(self, ip: str, password1='OTTER', password2='TAIL', porta=23, level2=False):
+        self.ip = ip
         self.tn = Telnet(ip, porta, timeout=10)
         self.tn.write(b'ACC\r\n')
         self.tn.read_until(b'Password: ?')
@@ -214,6 +215,8 @@ class SEL700:
         command = f'CON {remotebit} P'
         self.tn.write((command + '\r\n').encode('utf-8'))
         sleep(1)
+        self.tn.close()
+        self.__init__(self.ip, level2=True)
 
     def test_db(self, datatype: str, wordbit: str, value: str):
         """Enable and execute the Test Database Function in the IED"""
