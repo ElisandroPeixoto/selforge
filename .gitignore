@@ -3,7 +3,6 @@ selforge/__pycache__
 selforge/__init__.py
 tests/
 draft.py
-images/
 notebook.ipynb
 selforge.egg-info/
 dist/
