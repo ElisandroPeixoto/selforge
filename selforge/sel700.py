@@ -153,7 +153,7 @@ class SEL700:
         reading3 = reading2[1]
         reading4 = reading3.split('\r')
         final_reading = reading4[0]
-        return(final_reading)
+        return final_reading
     
     def telnet_close(self):
         self.tn.close()
@@ -244,6 +244,6 @@ class SEL700:
         self.tn.write(b'TEST DB\r\n')
         response = self.tn.read_until(B'=>>').decode('utf-8')
         if 'No Values' in response:
-            return(False)
+            return False
         else:
-            return(True)
+            return True
