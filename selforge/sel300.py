@@ -26,3 +26,31 @@ class SEL300:
         first_caracter = fid_text+4
         last_caracter = reading.find('"', fid_text+4)
         return reading[first_caracter:last_caracter]
+
+    def read_wordbit(self, module: str, wordbit: str):
+        """Read any configurable wordbit from the IED"""
+        command = f'FIL SHO {module}.TXT'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+        reading_expect = self.tn.expect([b'=>>', b'=>'])
+        reading = reading_expect[2].decode('utf-8')
+        reading2 = reading.split('\n')
+
+        # Detect the module
+        module_index_start = module.find('_')
+        module_name = module[module_index_start+1:]
+        module_index_str = "[" + module_name + "]\r"
+        module_index_int = reading2.index(module_index_str)
+
+        reading3 = reading2[module_index_int+1:]
+
+        # Build the Dictionarie
+        wordbits_dict = {}
+        for item in reading3:
+            if ',' in item:
+                key, value = item.strip().replace('\r', '').split(',', 1)
+                value = value.strip('"')
+                wordbits_dict[key] = value
+        try:
+            return wordbits_dict[wordbit]
+        except KeyError:
+            return "Wordbit not found"
