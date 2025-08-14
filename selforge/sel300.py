@@ -6,29 +6,28 @@ class SEL300:
     """Access any SEL 300 series device using a telnet connection"""
     def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
         self.ip = ip
-        self.tn = Telnet(ip, port, timeout=10)
-        self.tn.write(b'ACC\r\n')
-        self.tn.read_until(b'Password: ?')
-        self.tn.write((password1 + '\r\n').encode('utf-8'))
-        self.tn.read_until(b'=>')
-        if level2:
-            self.tn.write(b'2AC\r\n')
+        self.tn = None
+        try:
+            self.tn = Telnet(ip, port, timeout=10)
+            self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
-            self.tn.write((password2 + '\r\n').encode('utf-8'))
-            self.tn.read_until(b'=>>')
+            self.tn.write((password1 + '\r\n').encode('utf-8'))
+            self.tn.read_until(b'=>')
+            if level2:
+                self.tn.write(b'2AC\r\n')
+                self.tn.read_until(b'Password: ?')
+                self.tn.write((password2 + '\r\n').encode('utf-8'))
+                self.tn.read_until(b'=>>')
+        except TimeoutError:
+            print('Connection timed out. Check your connection and try again.')
 
     """ ######## METHODS LEVEL 1 ######## """
 
-    def read_firmware(self):
-        self.tn.write(b'ID\r\n')
-        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
-        fid_text = reading.find('FID=')
-        first_caracter = fid_text+4
-        last_caracter = reading.find('"', fid_text+4)
-        return reading[first_caracter:last_caracter]
-
     def read_wordbit(self, module: str, wordbit: str):
         """Read any configurable wordbit from the IED"""
+        if not self.tn:
+            return "Device not connected"
+
         command = f'FIL SHO {module}.TXT'
         self.tn.write((command + '\r\n').encode('utf-8'))
         reading_expect = self.tn.expect([b'=>>', b'=>'])
@@ -54,3 +53,33 @@ class SEL300:
             return wordbits_dict[wordbit]
         except KeyError:
             return "Wordbit not found"
+
+    def read_firmware(self):
+        """Read the IED Firmware"""
+        if not self.tn:
+            return "Device not connected"
+
+        self.tn.write(b'ID\r\n')
+        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        fid_text = reading.find('FID=')
+        first_caracter = fid_text + 4
+        last_caracter = reading.find('"', fid_text + 4)
+
+        return reading[first_caracter:last_caracter]
+
+    def read_partnumber(self):
+        """Read the IED Part Number"""
+        if not self.tn:
+            return "Device not connected"
+
+        self.tn.write(b'ID\r\n')
+        reading_expect = self.tn.expect([b'=>>', b'=>'])
+        reading = reading_expect[2].decode('utf-8')
+        text_source = reading.find('PARTNO=')
+        reading2 = reading[text_source::]
+        reading3 = reading2.split('=')
+        reading4 = reading3[1].split('\r\n')
+        reading5 = reading4[0].replace(' ', '').replace('"', '')
+        final_reading = reading5.split(',')
+
+        return final_reading[0]
