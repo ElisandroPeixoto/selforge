@@ -83,3 +83,37 @@ class SEL300:
         final_reading = reading5.split(',')
 
         return final_reading[0]
+
+    """ ######## METHODS LEVEL 2 ######## """
+
+    def open_breaker(self):
+        """Run the OPEN Command"""
+        if not self.tn:
+            print("Device not connected")
+            return
+
+        self.tn.write(b'OPEN\r\n')
+        self.tn.read_until(b'Open Breaker  (Y/N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        self.tn.read_until(b'Are you sure (Y/N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        print('Open Command executed')
+        self.tn.read_until(b'=>>')
+
+    def close_breaker(self):
+        """Run the CLOSE Command"""
+        if not self.tn:
+            print("Device not connected")
+            return
+
+        self.tn.write(b'CLOSE\r\n')
+        self.tn.read_until(b'Close Breaker  (Y/N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        self.tn.read_until(b'Are you sure (Y/N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        print('Close Command executed')
+        self.tn.read_until(b'=>>')

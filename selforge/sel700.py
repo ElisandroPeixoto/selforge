@@ -68,7 +68,7 @@ class SEL700:
 
     def read_dnppoint(self, data_type: str, position: int):
         """
-        Read an specific point from DNP Map
+        Read a specific point from DNP Map
         Specify the data type of the point:
         BI = Binary Inputs
         AI = Analog Inputs
@@ -178,7 +178,7 @@ class SEL700:
         self.tn.read_until(b'=>>')
 
     def edit_dnpmap(self, point_type: str, point_position: int, new_value: str):
-        """Edit an specific point of the DNP Map"""
+        """Edit a specific point of the DNP Map"""
         # Add a zero on the left if the point position is below 10
         if point_position < 10:
             point_position_string = '0' + str(point_position)
@@ -211,7 +211,7 @@ class SEL700:
         self.tn.read_until(b'=>>')
 
     def pulse_rb(self, remotebit: str):
-        """Pulses an specific Remote Bit"""
+        """Pulses a specific Remote Bit"""
         command = f'CON {remotebit} P'
         self.tn.write((command + '\r\n').encode('utf-8'))
         sleep(1)
