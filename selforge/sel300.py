@@ -84,6 +84,24 @@ class SEL300:
 
         return final_reading[0]
 
+    def read_serialnumber(self):
+        """Read the IED Serial Number"""
+        if not self.tn:
+            return "Device not connected"
+
+        self.tn.write(b'ID\r\n')
+        reading_expect = self.tn.expect([b'=>>', b'=>'])
+        reading = reading_expect[2].decode('utf-8')
+        text_source = reading.find('SERIALNO=')
+        reading2 = reading[text_source::]
+        reading3 = reading2.split('=')
+        reading4 = reading3[1].split('\r\n')
+        reading5 = reading4[0].split(',')
+        final_reading = reading5[0].replace('"', '')
+
+        return final_reading
+
+
     """ ######## METHODS LEVEL 2 ######## """
 
     def open_breaker(self):
@@ -117,3 +135,20 @@ class SEL300:
         sleep(1)
         print('Close Command executed')
         self.tn.read_until(b'=>>')
+
+    def pulse_rb(self, remote_bit: str):
+        """Pulses a specific Remote Bit"""
+        rb_number = remote_bit.replace('RB', '')
+
+        command = f'CON {rb_number}'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+
+        expect_text = f'CONTROL {remote_bit}: '
+        x = self.tn.read_until(expect_text.encode('utf-8'))
+
+        final_command = f'PRB {rb_number}'
+        self.tn.write((final_command + '\r\n').encode('utf-8'))
+
+        sleep(1)
+        self.tn.close()
+        self.__init__(self.ip, level2=True)
