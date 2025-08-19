@@ -5,18 +5,22 @@ import re
 
 class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
-    def __init__(self, ip: str, password1='OTTER', password2='TAIL', porta=23, level2=False):
+    def __init__(self, ip: str, password1='OTTER', password2='TAIL', port=23, level2=False):
         self.ip = ip
-        self.tn = Telnet(ip, porta, timeout=10)
-        self.tn.write(b'ACC\r\n')
-        self.tn.read_until(b'Password: ?')
-        self.tn.write((password1 + '\r\n').encode('utf-8'))
-        self.tn.read_until(b'=>')
-        if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
-            self.tn.write(b'2AC\r\n')
+        self.tn = None
+        try:
+            self.tn = Telnet(ip, port, timeout=10)
+            self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
-            self.tn.write((password2 + '\r\n').encode('utf-8'))
-            self.tn.read_until(b'=>>')
+            self.tn.write((password1 + '\r\n').encode('utf-8'))
+            self.tn.read_until(b'=>')
+            if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
+                self.tn.write(b'2AC\r\n')
+                self.tn.read_until(b'Password: ?')
+                self.tn.write((password2 + '\r\n').encode('utf-8'))
+                self.tn.read_until(b'=>>')
+        except TimeoutError:
+            print('Connection timed out. Check your connection and try again.')
 
     """ ######## METHODS LEVEL 1 ######## """
 
@@ -45,6 +49,9 @@ class SEL700:
 
     def read_partnumber(self):
         """Read the IED Part Number"""
+        if not self.tn:
+            return "Device not connected"
+
         self.tn.write(b'STA\r\n')
         reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
         text_source = reading.find('PART NUM = ')
