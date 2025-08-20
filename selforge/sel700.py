@@ -152,6 +152,15 @@ class SEL700:
         sleep(1)
         print('SER Clearing Complete')
 
+    def save_ser(self, lines: int=0, filename: str='SER_saved'):
+        ser_reading = self.read_ser(lines)
+        ser_cleaned = "\n".join(line.strip() for line in ser_reading.splitlines())
+
+        with open(filename+'.txt', "w", encoding="utf-8") as file:
+            file.write(ser_cleaned + '\n')
+
+        print(f'SER saved successfully as {filename}.txt')
+
     def read_time(self):
         """Read the time of the IED"""
         self.tn.write(b'TIME\r\n')

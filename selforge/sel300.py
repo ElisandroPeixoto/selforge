@@ -101,6 +101,38 @@ class SEL300:
 
         return final_reading
 
+    def read_ser(self, lines: int=1024):
+        """Read the IEDs SER. Enter the number of lines if you wish to view a limited quantity of records"""
+        command = f'SER {lines}\r\n'
+        self.tn.write(command.encode('utf-8'))
+        reading = (self.tn.read_until(b'=>')).decode('utf-8')
+        reading2 = reading.strip().split('\n')
+        list_lines = []
+
+        for ser_lines in reading2[6:-2]:
+            if ser_lines.strip():
+                list_lines.append(ser_lines)
+
+        final_ser = "\n".join(list_lines)
+        return final_ser
+
+    def clear_ser(self):
+        """Clear the IEDs SER"""
+        self.tn.write(b'SER C\r\n')
+        self.tn.read_until(b'Are you sure (Y/N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        print('SER Clearing Complete')
+
+    def save_ser(self, lines: int=1024, filename: str='SER_saved'):
+        ser_reading = self.read_ser(lines)
+        ser_cleaned = "\n".join(line.strip() for line in ser_reading.splitlines())
+
+        with open(filename+'.txt', "w", encoding="utf-8") as file:
+            file.write(ser_cleaned + '\n')
+
+        print(f'SER saved successfully as {filename}.txt')
+
 
     """ ######## METHODS LEVEL 2 ######## """
 
