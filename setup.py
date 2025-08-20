@@ -5,10 +5,11 @@ with open('README.md', 'r', encoding="utf-8") as arq:
 
 setup(
     name='selforge',
-    version='0.2',
+    version='0.3.1',
     author='Elisandro Peixoto',
     long_description=readme,
     long_description_content_type='text/markdown',
     author_email='elisandropeixoto21@gmail.com',
-    packages=['selforge']
+    packages=['selforge'],
+    python_requires='<3.13',
 )
