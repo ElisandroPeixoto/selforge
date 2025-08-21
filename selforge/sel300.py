@@ -1,3 +1,4 @@
+from re import findall
 from telnetlib import Telnet
 from time import sleep
 
@@ -99,6 +100,51 @@ class SEL300:
         reading5 = reading4[0].split(',')
         final_reading = reading5[0].replace('"', '')
 
+        return final_reading
+
+    def read_dnppoint(self, data_type: str, position: int):
+        """
+        Read a specific point from DNP Map
+        Specify the data type of the point:
+        BI = Binary Inputs
+        AI = Analog Inputs
+        BO = Binary Outputs
+        """
+        if position < 10:  # Add zero on the left if the position is smaller than 10
+            point_position2string = '00' + str(position)
+        else:
+            point_position2string = '0' + str(position)
+
+        command = f'FIL SHO SET_D1.TXT'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        reading2 = reading.split('\r\n')
+
+        for line in reading2:
+            if f'{data_type}_{point_position2string}' in line:
+                reading3 = line.split(',')
+                final_reading = reading3[1].strip('"')
+                return final_reading
+
+        return 'Method failed. Check the input parameters'
+
+    def read_dnpmap(self):
+        """Return a dictionary of the DNP Map of the specified data type"""
+        self.tn.write(b'FIL SHO SET_D1.TXT\r\n')
+        reading = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        text_source = reading.find('[D1]')
+        reading2 = reading[text_source::]
+        reading3 = reading2.split('\r\n')
+        reading3.pop(0)
+
+        final_reading = {}
+        for line in reading3:
+            try:
+                point, wordbit_comma = line.split(',')
+                wordbit = wordbit_comma.replace('"', '')
+                final_reading[point] = wordbit
+            except ValueError:
+                pass
         return final_reading
 
     def read_ser(self, lines: int=1024):
