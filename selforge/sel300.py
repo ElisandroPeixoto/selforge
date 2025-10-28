@@ -6,6 +6,7 @@ from time import sleep
 class SEL300:
     """Access any SEL 300 series device using a telnet connection"""
     def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
+        self.level2 = level2
         self.ip = ip
         self.tn = None
         try:
@@ -151,15 +152,24 @@ class SEL300:
         """Read the current value of a binary wordbit"""
         command = f'TAR {wordbit}'
         self.tn.write((command + '\r\n').encode('utf-8'))
-        reading = self.tn.read_until(b'=>').decode('utf-8')
-        removing_caracteres_1 = reading.replace(f'\x03TAR {wordbit}\r\n\x02\r\n', '')
-        removing_caracteres_2 = removing_caracteres_1.replace('\r\n\x03\x02\r\n=>', '')
+        if self.level2:
+            reading = self.tn.read_until(b'=>>').decode('utf-8')
+            removing_caracteres_1 = reading.replace(f'\x03TAR {wordbit}\r\n\x02\r\n', '')
+            removing_caracteres_2 = removing_caracteres_1.replace('\r\n\x03\x02\r\n=>>', '')
+        else:
+            reading = self.tn.read_until(b'=>').decode('utf-8')
+            removing_caracteres_1 = reading.replace(f'\x03TAR {wordbit}\r\n\x02\r\n', '')
+            removing_caracteres_2 = removing_caracteres_1.replace('\r\n\x03\x02\r\n=>', '')
+
         removing_caracteres_3 = removing_caracteres_2.replace('\r\n', ' ')
         reading2 = removing_caracteres_3.split(' ')
         reading3 = [element for element in reading2 if element.strip() != '']
 
         variables = reading3[:8]
         values = reading3[8:]
+
+        print(removing_caracteres_1)
+        print(variables, values)
 
         target_dictionary = dict(zip(variables, map(int, values)))
         final_reading = target_dictionary[wordbit]
