@@ -147,6 +147,25 @@ class SEL300:
                 pass
         return final_reading
 
+    def read_target_value(self, wordbit: str):
+        """Read the current value of a binary wordbit"""
+        command = f'TAR {wordbit}'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+        reading = self.tn.read_until(b'=>').decode('utf-8')
+        removing_caracteres_1 = reading.replace(f'\x03TAR {wordbit}\r\n\x02\r\n', '')
+        removing_caracteres_2 = removing_caracteres_1.replace('\r\n\x03\x02\r\n=>', '')
+        removing_caracteres_3 = removing_caracteres_2.replace('\r\n', ' ')
+        reading2 = removing_caracteres_3.split(' ')
+        reading3 = [element for element in reading2 if element.strip() != '']
+
+        variables = reading3[:8]
+        values = reading3[8:]
+
+        target_dictionary = dict(zip(variables, map(int, values)))
+        final_reading = target_dictionary[wordbit]
+
+        return final_reading
+
     def read_ser(self, lines: int=1024):
         """Read the IEDs SER. Enter the number of lines if you wish to view a limited quantity of records"""
         command = f'SER {lines}\r\n'
@@ -178,6 +197,17 @@ class SEL300:
             file.write(ser_cleaned + '\n')
 
         print(f'SER saved successfully as {filename}.txt')
+
+    def read_time(self):
+        """Read the time of the IED"""
+        self.tn.write(b'TIME\r\n')
+        reading = self.tn.read_until(b'=>').decode('utf-8')
+        reading1 = reading.split('\r\n')
+        final_reading = reading1[2].replace('\x03\x02', '')
+        return final_reading
+
+    def telnet_close(self):
+        self.tn.close()
 
 
     """ ######## METHODS LEVEL 2 ######## """

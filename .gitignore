@@ -6,3 +6,4 @@ draft.py
 notebook.ipynb
 selforge.egg-info/
 dist/
+.idea/
