@@ -168,9 +168,6 @@ class SEL300:
         variables = reading3[:8]
         values = reading3[8:]
 
-        print(removing_caracteres_1)
-        print(variables, values)
-
         target_dictionary = dict(zip(variables, map(int, values)))
         final_reading = target_dictionary[wordbit]
 
@@ -221,6 +218,29 @@ class SEL300:
 
 
     """ ######## METHODS LEVEL 2 ######## """
+
+    def edit_wordbit(self, command: str, parameter: str):
+        """Edit a specific parameter of the IED"""
+        command_in_bytes = (f'{command}' + '\r\n').encode('utf-8')
+        self.tn.write(command_in_bytes)
+        self.tn.read_until(b'? ').decode('utf-8')
+        parameter_in_bytes = (f'{parameter}' + '\r\n').encode('utf-8')
+        self.tn.write(parameter_in_bytes)
+        self.tn.read_until(b'? ').decode('utf-8')
+        self.tn.write(b'END\r\n')
+
+        print("Writting changes...")
+        while True:
+            return_message = self.tn.read_until(b'Press RETURN to continue', timeout=3)
+            decoded = return_message.decode('utf-8', errors='ignore')
+
+            if "Save Changes(Y/N)?" in decoded:
+                self.tn.write(b'Y\r\n')
+                sleep(5)
+                self.tn.read_until(b'=>>')
+                break
+            else:
+                self.tn.write(b'\r\n')
 
     def open_breaker(self):
         """Run the OPEN Command"""
