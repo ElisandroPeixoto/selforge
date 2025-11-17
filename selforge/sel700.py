@@ -206,7 +206,7 @@ class SEL700:
 
         self.tn.read_until(b'Save changes (Y,N)? ')
         self.tn.write(b'Y\r\n')
-        print("Writting changes...")
+        print("Writting changes in DNP Map 1...")
         sleep(5)
         self.tn.read_until(b'=>>')
 

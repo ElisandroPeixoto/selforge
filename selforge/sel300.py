@@ -242,6 +242,37 @@ class SEL300:
             else:
                 self.tn.write(b'\r\n')
 
+    def edit_dnpmap(self, point_type: str, point_position: int, new_value: str):
+        """Edit a specific point of the DNP Map"""
+        # Add a zero on the left if the point position is below 10
+        if point_position < 10:
+            point_position_string = '00' + str(point_position)
+        else:
+            point_position_string = str(point_position)
+
+        command = f'SET D 1 {point_type}_{point_position_string}'
+        self.tn.write((command + '\r\n').encode('utf-8'))
+
+        self.tn.read_until(b'? ').decode('utf-8')
+        self.tn.write(f'{new_value}\r\n'.encode('utf-8'))
+        self.tn.read_until(b'? ').decode('utf-8')
+        self.tn.write(b'END\r\n')
+
+        print("Writting change in DNP Map 1...")
+        while True:
+            return_message = self.tn.read_until(b'Press RETURN to continue', timeout=3)
+            decoded = return_message.decode('utf-8', errors='ignore')
+
+            if "Save Changes(Y/N)?" in decoded:
+                self.tn.write(b'Y\r\n')
+                sleep(5)
+                self.tn.read_until(b'=>>')
+                break
+            else:
+                self.tn.write(b'\r\n')
+
+
+
     def open_breaker(self):
         """Run the OPEN Command"""
         if not self.tn:
