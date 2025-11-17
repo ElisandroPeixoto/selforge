@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding="utf-8") as arq:
 
 setup(
     name='selforge',
-    version='0.3.3',
+    version='0.4',
     author='Elisandro Peixoto',
     long_description=readme,
     long_description_content_type='text/markdown',
