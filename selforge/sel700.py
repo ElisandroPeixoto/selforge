@@ -1,41 +1,65 @@
 from telnetlib import Telnet
 from time import sleep
-import re
 
+class CredentialError(Exception):
+    pass
 
 class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
     def __init__(self, ip: str, password1='OTTER', password2='TAIL', port=23, level2=False):
         self.ip = ip
         self.tn = None
+        self.password1 = password1
+        self.password2 = password2
+        self.level2 = level2
         try:
-            self.tn = Telnet(ip, port, timeout=10)
+            self.tn = Telnet(ip, port, timeout=5)
+
+            # Level 1 Connection
             self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
             self.tn.write((password1 + '\r\n').encode('utf-8'))
-            self.tn.read_until(b'=>')
+            password1_reponse = self.tn.read_until(b'=>', timeout=5)
+            if b'=>' not in password1_reponse:
+                raise CredentialError()
+
             if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
                 self.tn.write(b'2AC\r\n')
                 self.tn.read_until(b'Password: ?')
                 self.tn.write((password2 + '\r\n').encode('utf-8'))
-                self.tn.read_until(b'=>>')
+                password2_reponse = self.tn.read_until(b'=>>', timeout=5)
+
+                if b'=>>' not in password2_reponse:
+                    raise CredentialError()
+
         except TimeoutError:
-            print('Connection timed out. Check your connection and try again.')
+            print(f'\033[31mConnection Timed out. \033[0m')
+
+        except CredentialError:
+            print(f'\033[31mAccess Denied. \033[0m')
+            self.tn.close()
 
     """ ######## METHODS LEVEL 1 ######## """
 
     def read_wordbit(self, command: str):
         """Read any configurable wordbit from the IED. Write the command name as a telnet terminal"""
         self.tn.write((command + '\r\n').encode('utf-8'))
-        reading_expect = self.tn.expect([b'=>>', b'=>'])
-        reading = reading_expect[2].decode('utf-8')
-        reading2 = reading.split(':= ')
-        reading3 = reading2[1].split('\r')
-        reading4 = reading3[0].replace('\r', '')
-        reading5 = reading3[1].replace('            ', '')
-        final_reading = (reading4 + reading5).split('\n\x03\x02')
-        return final_reading[0]
-     
+        try:
+            reading_expect = self.tn.expect([b'=>>', b'=>'], timeout=5)
+            reading = reading_expect[2].decode('utf-8')
+            reading2 = reading.split(':= ')
+            reading3 = reading2[1].split('\r')
+            reading4 = reading3[0].replace('\r', '')
+            reading5 = reading3[1].replace('            ', '')
+            final_reading = (reading4 + reading5).split('\n\x03\x02')
+            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
+            return final_reading[0]
+
+        except IndexError:
+            error_msg = f'\033[31mMethod execution failed. Check the parameters and try again.\033[0m'
+            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2)
+            return error_msg
+
     def read_firmware(self):
         """Read the IED Firmware"""
         self.tn.write(b'ID\r\n')
@@ -232,7 +256,7 @@ class SEL700:
         self.tn.write((command + '\r\n').encode('utf-8'))
         sleep(1)
         self.tn.close()
-        self.__init__(self.ip, level2=True)
+        self.__init__(self.ip, level2=True, password1=self.password1, password2=self.password2)
 
     def test_db(self, datatype: str, wordbit: str, value: str):
         """Enable and execute the Test Database Function in the IED"""

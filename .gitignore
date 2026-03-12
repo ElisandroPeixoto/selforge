@@ -3,7 +3,8 @@ selforge/__pycache__
 selforge/__init__.py
 tests/
 draft.py
-notebook.ipynb
+notebook_300.ipynb
+notebook_700.ipynb
 selforge.egg-info/
 dist/
 .idea/

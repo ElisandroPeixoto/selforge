@@ -9,6 +9,8 @@ class SEL300:
         self.level2 = level2
         self.ip = ip
         self.tn = None
+        self.password1 = password1
+        self.password2 = password2
         try:
             self.tn = Telnet(ip, port, timeout=10)
             self.tn.write(b'ACC\r\n')
@@ -313,11 +315,11 @@ class SEL300:
         self.tn.write((command + '\r\n').encode('utf-8'))
 
         expect_text = f'CONTROL {remote_bit}: '
-        x = self.tn.read_until(expect_text.encode('utf-8'))
+        self.tn.read_until(expect_text.encode('utf-8'))
 
         final_command = f'PRB {rb_number}'
         self.tn.write((final_command + '\r\n').encode('utf-8'))
 
         sleep(1)
         self.tn.close()
-        self.__init__(self.ip, level2=True)
+        self.__init__(self.ip, level2=True, password1=self.password1, password2=self.password2)
