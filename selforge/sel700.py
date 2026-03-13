@@ -33,17 +33,38 @@ class SEL700:
                     raise CredentialError()
 
         except TimeoutError:
-            print(f'\033[31mConnection Timed out. \033[0m')
+            print(f'\033[31mConnection Timed out. [Log ID:1]\033[0m')
 
         except CredentialError:
-            print(f'\033[31mAccess Denied. \033[0m')
+            print(f'\033[31mAccess Denied. [Log ID: 2]\033[0m')
             self.tn.close()
 
     """ ######## METHODS LEVEL 1 ######## """
 
-    def read_wordbit(self, command: str):
-        """Read any configurable wordbit from the IED. Write the command name as a telnet terminal"""
-        self.tn.write((command + '\r\n').encode('utf-8'))
+    def read_wordbit(self, module: str, module_index: str, wordbit: str):
+        """
+        Read any configurable wordbit from the IED. Write the command name as a telnet terminal.
+
+        Args:
+            module (str): The name of the module to read the wordbit from.
+                Modules included:
+                - 'G': Global Settings
+                - 'L': Logic Settings
+                - 'D': DNP Map Settings
+                - 'P': Port Settings
+                - 'F': Front Panel Settings
+                - 'R': Report Settings
+                - 'M': Modbus Settings
+                - 'GROUP': Group Settings
+
+            module_index (str): The index of the module to read the wordbit from.
+
+            wordbit (str): The name of the wordbit to read.
+
+        Returns:
+            str: The wordbit from the relay
+        """
+        self.tn.write(('SHO ' + module + " " + module_index + " " + wordbit + '\r\n').encode('utf-8'))
         try:
             reading_expect = self.tn.expect([b'=>>', b'=>'], timeout=5)
             reading = reading_expect[2].decode('utf-8')
@@ -56,7 +77,7 @@ class SEL700:
             return final_reading[0]
 
         except IndexError:
-            error_msg = f'\033[31mMethod execution failed. Check the parameters and try again.\033[0m'
+            error_msg = f'\033[31mMethod execution failed. Check the parameters and try again. [Log ID: 3]\033[0m'
             self.__init__(ip=self.ip, password1=self.password1, password2=self.password2)
             return error_msg
 
