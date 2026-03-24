@@ -1,47 +1,82 @@
-from re import findall
 from telnetlib import Telnet
 from time import sleep
 
 
+class CredentialError(Exception):
+    pass
+
 class SEL300:
     """Access any SEL 300 series device using a telnet connection"""
     def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
-        self.level2 = level2
         self.ip = ip
         self.tn = None
         self.password1 = password1
         self.password2 = password2
+        self.level2 = level2
         try:
-            self.tn = Telnet(ip, port, timeout=10)
+            self.tn = Telnet(ip, port, timeout=5)
+
+            # Level 1 Connection
             self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
             self.tn.write((password1 + '\r\n').encode('utf-8'))
-            self.tn.read_until(b'=>')
-            if level2:
+            password1_response = self.tn.read_until(b'=>', timeout=5)
+            if b'=>' not in password1_response:
+                raise CredentialError()
+
+            if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
                 self.tn.write(b'2AC\r\n')
                 self.tn.read_until(b'Password: ?')
                 self.tn.write((password2 + '\r\n').encode('utf-8'))
-                self.tn.read_until(b'=>>')
+                password2_response = self.tn.read_until(b'=>>', timeout=5)
+
+                if b'=>>' not in password2_response:
+                    raise CredentialError()
+
         except TimeoutError:
-            print('Connection timed out. Check your connection and try again.')
+            print(f'\033[31mConnection Timed out. [Log ID:1]\033[0m')
+
+        except CredentialError:
+            print(f'\033[31mAccess Denied. [Log ID: 2]\033[0m')
+            self.tn.close()
 
     """ ######## METHODS LEVEL 1 ######## """
 
-    def read_wordbit(self, module: str, wordbit: str):
-        """Read any configurable wordbit from the IED"""
+    def read_wordbit(self, module: str='', module_index: str='', wordbit: str=''):
+        """
+        Read any configurable wordbit from the IED. Write the command name as a telnet terminal.
+
+        Args:
+            module (str): The name of the module to read the wordbit from.
+                Modules included:
+                - 'G': Global Settings
+                - 'L': Logic Settings
+                - 'D': DNP Map Settings
+                - 'P': Port Settings
+                - 'F': Front Panel Settings
+                - 'R': Report Settings
+                - 'M': Modbus Settings
+                - Empty String: Group Settings
+
+            module_index (str): The index of the module to read the wordbit from.
+
+            wordbit (str): The name of the wordbit to read.
+
+        Returns:
+            str: The wordbit from the relay
+        """
         if not self.tn:
             return "Device not connected"
 
-        command = f'FIL SHO {module}.TXT'
+        args = [arg for arg in (module, module_index) if arg]  # Check empty spaces
+
+        command = f'FIL SHO SET_' + ''.join(args) + '.TXT'
         self.tn.write((command + '\r\n').encode('utf-8'))
         reading_expect = self.tn.expect([b'=>>', b'=>'])
         reading = reading_expect[2].decode('utf-8')
         reading2 = reading.split('\n')
 
-        # Detect the module
-        module_index_start = module.find('_')
-        module_name = module[module_index_start+1:]
-        module_index_str = "[" + module_name + "]\r"
+        module_index_str = "[" + module + module_index + "]\r"
         module_index_int = reading2.index(module_index_str)
 
         reading3 = reading2[module_index_int+1:]
@@ -54,8 +89,10 @@ class SEL300:
                 value = value.strip('"')
                 wordbits_dict[key] = value
         try:
+            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
             return wordbits_dict[wordbit]
         except KeyError:
+            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
             return "Wordbit not found"
 
     def read_firmware(self):

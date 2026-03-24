@@ -1,12 +1,13 @@
 from telnetlib import Telnet
 from time import sleep
 
+
 class CredentialError(Exception):
     pass
 
 class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
-    def __init__(self, ip: str, password1='OTTER', password2='TAIL', port=23, level2=False):
+    def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
         self.ip = ip
         self.tn = None
         self.password1 = password1
@@ -19,29 +20,29 @@ class SEL700:
             self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
             self.tn.write((password1 + '\r\n').encode('utf-8'))
-            password1_reponse = self.tn.read_until(b'=>', timeout=5)
-            if b'=>' not in password1_reponse:
+            password1_response = self.tn.read_until(b'=>', timeout=5)
+            if b'=>' not in password1_response:
                 raise CredentialError()
 
             if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
                 self.tn.write(b'2AC\r\n')
                 self.tn.read_until(b'Password: ?')
                 self.tn.write((password2 + '\r\n').encode('utf-8'))
-                password2_reponse = self.tn.read_until(b'=>>', timeout=5)
+                password2_response = self.tn.read_until(b'=>>', timeout=5)
 
-                if b'=>>' not in password2_reponse:
+                if b'=>>' not in password2_response:
                     raise CredentialError()
 
         except TimeoutError:
-            print(f'\033[31mConnection Timed out. [Log ID:1]\033[0m')
+            print(f'\033[31m{ip}: Connection Timed out. [Log ID:1]\033[0m')
 
         except CredentialError:
-            print(f'\033[31mAccess Denied. [Log ID: 2]\033[0m')
+            print(f'\033[31m{ip}: Access Denied. [Log ID: 2]\033[0m')
             self.tn.close()
 
     """ ######## METHODS LEVEL 1 ######## """
 
-    def read_wordbit(self, module: str, module_index: str, wordbit: str):
+    def read_wordbit(self, module: str=None, module_index: str=None, wordbit: str=None):
         """
         Read any configurable wordbit from the IED. Write the command name as a telnet terminal.
 
@@ -55,7 +56,7 @@ class SEL700:
                 - 'F': Front Panel Settings
                 - 'R': Report Settings
                 - 'M': Modbus Settings
-                - 'GROUP': Group Settings
+                - Empty String: Group Settings
 
             module_index (str): The index of the module to read the wordbit from.
 
@@ -64,7 +65,9 @@ class SEL700:
         Returns:
             str: The wordbit from the relay
         """
-        self.tn.write(('SHO ' + module + " " + module_index + " " + wordbit + '\r\n').encode('utf-8'))
+        args = [arg for arg in (module, module_index, wordbit) if arg]  # Check empty spaces
+        command_str = 'SHO ' + ' '.join(args) + '\r\n'
+        self.tn.write(command_str.encode('utf-8'))
         try:
             reading_expect = self.tn.expect([b'=>>', b'=>'], timeout=5)
             reading = reading_expect[2].decode('utf-8')
@@ -308,3 +311,6 @@ class SEL700:
             return False
         else:
             return True
+
+    def reconnect_telnet(self):
+        pass
