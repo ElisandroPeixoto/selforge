@@ -9,36 +9,54 @@ class SEL300:
     """Access any SEL 300 series device using a telnet connection"""
     def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
         self.ip = ip
+        self.port = port
         self.tn = None
         self.password1 = password1
         self.password2 = password2
         self.level2 = level2
-        try:
-            self.tn = Telnet(ip, port, timeout=5)
 
+        self.connect()  # Start connection
+
+    def connect(self):
+        """Start the connection to the SEL relay"""
+        try:
+            self.tn = Telnet(self.ip, self.port, timeout=5)
+            self._authenticate()
+        except TimeoutError:
+            print(f'\033[31m{self.ip}: Connection Timed out. [Log ID:1]\033[0m')
+
+    def _authenticate(self):
+        """Authenticate to the SEL relay"""
+        try:
             # Level 1 Connection
             self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
-            self.tn.write((password1 + '\r\n').encode('utf-8'))
+            self.tn.write((self.password1 + '\r\n').encode('utf-8'))
             password1_response = self.tn.read_until(b'=>', timeout=5)
             if b'=>' not in password1_response:
                 raise CredentialError()
 
-            if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
+            if self.level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
                 self.tn.write(b'2AC\r\n')
                 self.tn.read_until(b'Password: ?')
-                self.tn.write((password2 + '\r\n').encode('utf-8'))
+                self.tn.write((self.password2 + '\r\n').encode('utf-8'))
                 password2_response = self.tn.read_until(b'=>>', timeout=5)
 
                 if b'=>>' not in password2_response:
                     raise CredentialError()
 
-        except TimeoutError:
-            print(f'\033[31mConnection Timed out. [Log ID:1]\033[0m')
-
         except CredentialError:
-            print(f'\033[31mAccess Denied. [Log ID: 2]\033[0m')
+            print(f'\033[31m{self.ip}: Access Denied. [Log ID: 2]\033[0m')
             self.tn.close()
+
+    def reconnect(self):
+        """Reconnect to the SEL relay and clear the terminal"""
+        try:
+            self.tn.write(b'\r\n')
+            self.tn.expect([b'=>', b'=>>'], timeout=5)
+            self.tn.read_very_eager()
+        except:
+            self.connect()
 
     """ ######## METHODS LEVEL 1 ######## """
 
@@ -65,35 +83,62 @@ class SEL300:
         Returns:
             str: The wordbit from the relay
         """
-        if not self.tn:
-            return "Device not connected"
 
+        # Construct the internal file read command (e.g., FIL SHO SET_L1.TXT)
+        # We filter empty strings to handle cases where module or index aren't used
         args = [arg for arg in (module, module_index) if arg]  # Check empty spaces
+        command = f'FIL SHO SET_' + ''.join(args) + '.TXT\r\n'
 
-        command = f'FIL SHO SET_' + ''.join(args) + '.TXT'
-        self.tn.write((command + '\r\n').encode('utf-8'))
-        reading_expect = self.tn.expect([b'=>>', b'=>'])
-        reading = reading_expect[2].decode('utf-8')
-        reading2 = reading.split('\n')
+        # The target_marker identifies the start of the relevant section in the output (e.g., [L1])
+        target_marker = f'[{module}{module_index}]'
 
-        module_index_str = "[" + module + module_index + "]\r"
-        module_index_int = reading2.index(module_index_str)
-
-        reading3 = reading2[module_index_int+1:]
-
-        # Build the Dictionarie
-        wordbits_dict = {}
-        for item in reading3:
-            if ',' in item:
-                key, value = item.strip().replace('\r', '').split(',', 1)
-                value = value.strip('"')
-                wordbits_dict[key] = value
         try:
-            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
-            return wordbits_dict[wordbit]
+            # Send command and wait for the relay to return to the prompt
+            self.tn.write(command.encode('utf-8'))
+            _, _, raw_data = self.tn.expect([b'=>>', b'=>'], timeout=5)
+
+            # Decode and split into lines for processing
+            reading = raw_data.decode('utf-8', errors='ignore')
+            reading_lines = reading.split('\n')
+
+            # Robust searching: Find the index of the line containing the section marker
+            # We use 'in' instead of exact matching to avoid issues with hidden terminal characters
+            module_index_int = -1
+            for i, line in enumerate(reading_lines):
+                if target_marker in line:
+                    module_index_int = i
+                    break
+
+            # Start parsing from the line immediately following the marker
+            relevant_lines = reading_lines[module_index_int + 1:]
+
+            # Build the Dictionary
+            wordbits_dict = {}
+            for item in relevant_lines:
+                if ',' in item:
+                    # Clean the line of carriage returns, leading/trailing spaces, and quote
+                    clean_line = item.strip().replace('\r', '')
+                    parts = clean_line.split(',', 1)
+                    if len(parts) == 2:
+                        key = parts[0].strip()
+                        value = parts[1].strip().strip('"')
+                        wordbits_dict[key] = value
+                elif '=>' in item:  # Stop processing if we hit the next terminal prompt
+                    break
+
+            # Retrieves the value from the dictionary
+            if wordbit in wordbits_dict:
+                return wordbits_dict[wordbit]
+            else:
+                print(f'\033[31mMethod execution failed. Check the parameters and try again. [Log ID: 3]\033[0m')
+
         except KeyError:
-            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
-            return "Wordbit not found"
+            error_msg = f'\033[31mMethod execution failed. Check the parameters and try again. [Log ID: 3]\033[0m'
+            print(error_msg)
+            self.reconnect()
+
+        finally:
+            self.reconnect()
 
     def read_firmware(self):
         """Read the IED Firmware"""

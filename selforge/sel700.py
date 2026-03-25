@@ -9,36 +9,54 @@ class SEL700:
     """Access any SEL 700 series device using a telnet connection"""
     def __init__(self, ip: str, password1: str='OTTER', password2: str='TAIL', port: int=23, level2: bool=False):
         self.ip = ip
+        self.port = port
         self.tn = None
         self.password1 = password1
         self.password2 = password2
         self.level2 = level2
-        try:
-            self.tn = Telnet(ip, port, timeout=5)
 
+        self.connect()  # Start connection
+
+    def connect(self):
+        """Start the connection to the SEL relay"""
+        try:
+            self.tn = Telnet(self.ip, self.port, timeout=5)
+            self._authenticate()
+        except TimeoutError:
+            print(f'\033[31m{self.ip}: Connection Timed out. [Log ID:1]\033[0m')
+
+    def _authenticate(self):
+        """Authenticate to the SEL relay"""
+        try:
             # Level 1 Connection
             self.tn.write(b'ACC\r\n')
             self.tn.read_until(b'Password: ?')
-            self.tn.write((password1 + '\r\n').encode('utf-8'))
+            self.tn.write((self.password1 + '\r\n').encode('utf-8'))
             password1_response = self.tn.read_until(b'=>', timeout=5)
             if b'=>' not in password1_response:
                 raise CredentialError()
 
-            if level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
+            if self.level2:  # If level2 is True (Required to use level 2 methods), ask for the level 2 password
                 self.tn.write(b'2AC\r\n')
                 self.tn.read_until(b'Password: ?')
-                self.tn.write((password2 + '\r\n').encode('utf-8'))
+                self.tn.write((self.password2 + '\r\n').encode('utf-8'))
                 password2_response = self.tn.read_until(b'=>>', timeout=5)
 
                 if b'=>>' not in password2_response:
                     raise CredentialError()
 
-        except TimeoutError:
-            print(f'\033[31m{ip}: Connection Timed out. [Log ID:1]\033[0m')
-
         except CredentialError:
-            print(f'\033[31m{ip}: Access Denied. [Log ID: 2]\033[0m')
+            print(f'\033[31m{self.ip}: Access Denied. [Log ID: 2]\033[0m')
             self.tn.close()
+
+    def reconnect(self):
+        """Reconnect to the SEL relay and clear the terminal"""
+        try:
+            self.tn.write(b'\r\n')
+            self.tn.expect([b'=>', b'=>>'], timeout=5)
+            self.tn.read_very_eager()
+        except:
+            self.connect()
 
     """ ######## METHODS LEVEL 1 ######## """
 
@@ -77,12 +95,16 @@ class SEL700:
             reading5 = reading3[1].replace('            ', '')
             final_reading = (reading4 + reading5).split('\n\x03\x02')
             self.__init__(ip=self.ip, password1=self.password1, password2=self.password2, level2=self.level2)
+
             return final_reading[0]
 
         except IndexError:
             error_msg = f'\033[31mMethod execution failed. Check the parameters and try again. [Log ID: 3]\033[0m'
-            self.__init__(ip=self.ip, password1=self.password1, password2=self.password2)
-            return error_msg
+            print(error_msg)
+            self.reconnect()
+
+        finally:
+            self.reconnect()
 
     def read_firmware(self):
         """Read the IED Firmware"""
