@@ -1,6 +1,7 @@
 from telnetlib import Telnet
 from time import sleep
 from .ftp import SELFTP
+from typing import Literal
 
 
 class CredentialError(Exception):
@@ -399,7 +400,7 @@ class SEL700:
         pass
 
     
-    def download_event(self, event_code: str, event_type: str = "filtered", local_file_path: str = "./"):
+    def download_event(self, event_code: str, event_type: Literal["filtered", "raw"] = "filtered", local_file_path: str = "./"):
         """Download an event file from the IED using FTP"""
         ftp_client = SELFTP(host=self.ip, user='2AC', password=self.password2)
 
@@ -408,4 +409,4 @@ class SEL700:
         elif event_type == "raw":
             ftp_client.download_file(f"EVENTS/CR_{event_code}.CEV", local_file_path)
         else:
-            print("Invalid event type. Please choose 'filtered' or 'raw'.")
+            raise ValueError("Invalid event type. Use 'filtered' or 'raw'.")

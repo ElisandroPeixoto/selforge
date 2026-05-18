@@ -1,5 +1,7 @@
 from telnetlib import Telnet
 from time import sleep
+from .ftp import SELFTP
+from typing import Literal
 
 
 class CredentialError(Exception):
@@ -57,6 +59,7 @@ class SEL300:
             self.tn.read_very_eager()
         except:
             self.connect()
+
 
     """ ######## METHODS LEVEL 1 ######## """
 
@@ -140,6 +143,7 @@ class SEL300:
         finally:
             self.reconnect()
 
+
     def read_firmware(self):
         """Read the IED Firmware"""
         if not self.tn:
@@ -152,6 +156,7 @@ class SEL300:
         last_caracter = reading.find('"', fid_text + 4)
 
         return reading[first_caracter:last_caracter]
+
 
     def read_partnumber(self):
         """Read the IED Part Number"""
@@ -170,6 +175,7 @@ class SEL300:
 
         return final_reading[0]
 
+
     def read_serialnumber(self):
         """Read the IED Serial Number"""
         if not self.tn:
@@ -186,6 +192,7 @@ class SEL300:
         final_reading = reading5[0].replace('"', '')
 
         return final_reading
+
 
     def read_dnppoint(self, data_type: str, position: int):
         """
@@ -213,6 +220,7 @@ class SEL300:
 
         return 'Method failed. Check the input parameters'
 
+
     def read_dnpmap(self):
         """Return a dictionary of the DNP Map of the specified data type"""
         self.tn.write(b'FIL SHO SET_D1.TXT\r\n')
@@ -231,6 +239,7 @@ class SEL300:
             except ValueError:
                 pass
         return final_reading
+
 
     def read_target_value(self, wordbit: str):
         """Read the current value of a binary wordbit"""
@@ -257,6 +266,7 @@ class SEL300:
 
         return final_reading
 
+
     def read_ser(self, lines: int=1024):
         """Read the IEDs SER. Enter the number of lines if you wish to view a limited quantity of records"""
         command = f'SER {lines}\r\n'
@@ -272,6 +282,7 @@ class SEL300:
         final_ser = "\n".join(list_lines)
         return final_ser
 
+
     def clear_ser(self):
         """Clear the IEDs SER"""
         self.tn.write(b'SER C\r\n')
@@ -279,6 +290,7 @@ class SEL300:
         self.tn.write(b'Y\r\n')
         sleep(1)
         print('SER Clearing Complete')
+
 
     def save_ser(self, lines: int=1024, filename: str='SER_saved'):
         ser_reading = self.read_ser(lines)
@@ -289,6 +301,28 @@ class SEL300:
 
         print(f'SER saved successfully as {filename}.txt')
 
+
+    def read_his(self):
+        self.tn.write(b'HIS\r\n')
+        reading_expect = self.tn.expect([b'=>>', b'=>'], timeout=5)
+        reading2 = reading_expect[2].decode("utf-8").strip().split('\n')
+
+        if "No Data Available" in reading2[1]:
+            print("No Data Available")
+        else:
+            for events in reading2[5:-2]:
+                print(events)
+
+
+    def clear_his(self):
+        """Clear the IEDs HIS"""
+        self.tn.write(b'HIS C\r\n')
+        self.tn.read_until(b'Are you sure (Y,N)?')
+        self.tn.write(b'Y\r\n')
+        sleep(1)
+        print('HIS Clearing Complete')
+
+
     def read_time(self):
         """Read the time of the IED"""
         self.tn.write(b'TIME\r\n')
@@ -296,6 +330,14 @@ class SEL300:
         reading1 = reading.split('\r\n')
         final_reading = reading1[2].replace('\x03\x02', '')
         return final_reading
+    
+
+    def generic_command(self, command: str):
+        """Execute a generic command in the IED. Use with caution."""
+        self.tn.write((command + '\r\n').encode('utf-8'))
+        reading_expect = self.tn.read_until(b'=>', timeout=5).decode('utf-8')
+        print(reading_expect)
+
 
     def telnet_close(self):
         self.tn.close()
@@ -405,3 +447,22 @@ class SEL300:
         sleep(1)
         self.tn.close()
         self.__init__(self.ip, level2=True, password1=self.password1, password2=self.password2)
+
+
+    """ ######## METHODS FTP ######## """
+
+    def upload_file(self, local_file_path: str, event_code: str):
+        """FUTURE: Upload a file to the IED using FTP"""
+        pass
+
+    
+    def download_event(self, event_code: str, event_type: Literal["filtered", "raw"] = "filtered", local_file_path: str = "./"):
+        """Download an event file from the IED using FTP"""
+        ftp_client = SELFTP(host=self.ip, user='2AC', password=self.password2)
+
+        if event_type == "filtered":
+            ftp_client.download_file(f"EVENTS/C4_{event_code}.CEV", local_file_path)
+        elif event_type == "raw":
+            ftp_client.download_file(f"EVENTS/CR_{event_code}.CEV", local_file_path)
+        else:
+            raise ValueError("Invalid event type. Use 'filtered' or 'raw'.")
